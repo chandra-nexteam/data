@@ -1,0 +1,65 @@
+https://colab.research.google.com/drive/1_GkvlUrhUhGC4kK4941aYZmMiSpij6Hx?usp=sharing (# google colabs for result)
+
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df=pd.read_csv("mobile.csv")
+df
+
+df.info()
+df.price_class.value_counts()
+
+#EDA
+df[df.price_class==1].describe()
+df[df.price_class==0].describe()
+
+# Categoric vs Numeric
+
+plt.figure(figsize=(9,6))
+sns.boxplot(x="price_class", y="ram",data=df)
+
+plt.figure(figsize=(9,6))
+sns.boxplot(x="price_class", y="battery_power",data=df)
+
+plt.figure(figsize=(9,6))
+sns.boxplot(x="price_class", y="battery_power",data=df)
+
+
+
+
+
+data_bar=df.groupby('price_class').mean().reset_index()
+data_bar
+
+plt.figure(figsize=(10,10))
+bar3=sns.barplot(x='price_class', y='ram',data=data_bar, color='darkgreen')
+bar4=sns.barplot(x='price_class', y='battery_power', data=data_bar, color='yellow')
+plt.title('Grafik Perbandingan RAM dan BATTERY_POWER')
+plt.ylabel("jumlah")
+colors = {'ram':'darkgreen', 'battery_power':'yellow'}         
+labels = list(colors.keys())
+handles = [plt.Rectangle((0,0),1,1, color=colors[label]) for label in labels]
+plt.legend(handles, labels)
+
+#Categotic vs Categoric
+
+sns.countplot(x='three_g',hue='price_class',data=df)
+sns.countplot(x='touch_screen',hue='price_class',data=df)
+
+
+#Multivariate Korelasi
+plt.figure(figsize=(25,25))
+sns.heatmap(df.corr(),annot=True)
+
+
+#Reduksi Variable
+df_reduksi=pd.DataFrame([])
+df_reduksi['ram']=df['ram']
+df_reduksi['battery_power']=df['battery_power']
+df_reduksi['px_width']=df['px_width']
+df_reduksi['px_height']=df['px_height']
+df_reduksi['price_class']=df['price_class']
+df_reduksi
