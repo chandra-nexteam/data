@@ -1,6 +1,9 @@
 #link google colabs
 https://colab.research.google.com/drive/1AMY6vEAWHTqwkb9IHYUuc9RpXuR9onQC?usp=sharing
 
+data
+https://drive.google.com/file/d/1Z6Gft7199_hIqTNo7QC6gyNeBq94sZ4K/view?usp=sharing
+
 code 
 import numpy as np
 import pandas as pd
