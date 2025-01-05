@@ -1,0 +1,144 @@
+# Import libraries
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import pickle
+import warnings
+
+# Ignore warnings
+warnings.filterwarnings('ignore')
+
+# Function to load and preprocess data
+def load_and_preprocess(filepath):
+    print("Loading dataset...")
+    df = pd.read_csv(filepath)
+    print(f"Dataset shape: {df.shape}\n")
+
+    # Handle missing values
+    print("Checking for missing values...")
+    print(df.isnull().sum())
+
+    # Encode categorical variables dynamically
+    label_encoders = {}
+    for col in ['Gender', 'Vehicle_Age', 'Vehicle_Damage']:
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col])
+        label_encoders[col] = le
+
+    return df, label_encoders
+
+# Function to split data and scale features
+def prepare_data(df, features, target, test_size=0.2):
+    print("Splitting dataset into training and testing sets...")
+    X = df[features]
+    y = df[target]
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+
+    print("Performing feature scaling...")
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    return X_train_scaled, X_test_scaled, y_train, y_test, scaler
+
+# Function to train and evaluate model
+def train_and_evaluate(X_train, X_test, y_train, y_test):
+    print("Training Random Forest model...")
+    rf_model = RandomForestClassifier(n_estimators=100, max_depth=10, min_samples_split=5, random_state=42, n_jobs=-1)
+    rf_model.fit(X_train, y_train)
+
+    # Predictions
+    print("\nEvaluating model performance...")
+    y_pred = rf_model.predict(X_test)
+    print(f"Model Accuracy: {accuracy_score(y_test, y_pred):.2f}")
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred))
+
+    # Cross-validation
+    cv_scores = cross_val_score(rf_model, X_train, y_train, cv=5)
+    print(f"\nCross-validation scores: {cv_scores}")
+    print(f"Average CV score: {cv_scores.mean():.2f}")
+
+    return rf_model
+
+# Function to save the model
+def save_model(model, scaler, label_encoders, features, filename):
+    print("\nSaving model and preprocessing objects...")
+    model_data = {
+        'model': model,
+        'scaler': scaler,
+        'label_encoders': label_encoders,
+        'features': features
+    }
+    with open(filename, 'wb') as file:
+        pickle.dump(model_data, file)
+    print(f"Model saved as {filename}")
+
+# Function to predict using saved model
+def predict_insurance_purchase(model_file, customer_data):
+    with open(model_file, 'rb') as file:
+        model_data = pickle.load(file)
+
+    model = model_data['model']
+    scaler = model_data['scaler']
+    label_encoders = model_data['label_encoders']
+    features = model_data['features']
+
+    input_data = {}
+    for feature in features:
+        if feature in customer_data:
+            if feature in label_encoders:  # Transform categorical variables
+                le = label_encoders[feature]
+                input_data[feature] = le.transform([customer_data[feature]])[0]
+            else:
+                input_data[feature] = customer_data[feature]
+        else:
+            input_data[feature] = 0  # Default value for missing fields
+
+    input_df = pd.DataFrame([input_data])
+    input_scaled = scaler.transform(input_df)
+    prediction = model.predict(input_scaled)[0]
+    probability = model.predict_proba(input_scaled)[0]
+
+    return prediction, probability
+
+# Main Script
+if __name__ == "__main__":
+    # Filepath and features
+    filepath = 'Prediction Insurance  Prediction Insurance.csv'
+    features = ['Gender', 'Age', 'Driving_License', 'Region_Code', 'Previously_Insured', 
+                'Vehicle_Age', 'Vehicle_Damage', 'Annual_Premium', 'Policy_Sales_Channel', 'Vintage']
+    target = 'Response'
+
+    # Load and preprocess data
+    df, label_encoders = load_and_preprocess(filepath)
+
+    # Prepare data
+    X_train, X_test, y_train, y_test, scaler = prepare_data(df, features, target)
+
+    # Train and evaluate model
+    rf_model = train_and_evaluate(X_train, X_test, y_train, y_test)
+
+    # Save model
+    save_model(rf_model, scaler, label_encoders, features, 'insurance_prediction_model.pkl')
+
+    # Test prediction
+    sample_customer = {
+        'Gender': 'Male',
+        'Age': 35,
+        'Driving_License': 1,
+        'Region_Code': 28,
+        'Previously_Insured': 0,
+        'Vehicle_Age': '1-2 Year',
+        'Vehicle_Damage': 'Yes',
+        'Annual_Premium': 30000,
+        'Policy_Sales_Channel': 152,
+        'Vintage': 100
+    }
+    prediction, probability = predict_insurance_purchase('insurance_prediction_model.pkl', sample_customer)
+    print(f"\nPrediction for sample customer: {'Will Buy' if prediction == 1 else 'Will Not Buy'}")
+    print(f"Probability: No: {probability[0]:.2f}, Yes: {probability[1]:.2f}")
